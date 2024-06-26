@@ -32,3 +32,5 @@ Para usar o script, substitua o URL do vídeo do YouTube pelo URL do vídeo que 
 
 ```javascript
 const videoUrl = 'https://www.youtube.com/watch?v=B1ykr-a5G9g'; // Substitua com o URL do vídeo do YouTube
+ const videoTitle = info.videoDetails.title;
+  res.download(outputPath, `${videoTitle}.mp3`);

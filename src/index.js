@@ -1,11 +1,22 @@
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const ffmpeg = require('fluent-ffmpeg');
 ffmpeg.setFfmpegPath(ffmpegPath);
-
+const express = require('express');
 const ytdl = require('ytdl-core');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const cors = require('cors');
+
+const app = express();
+const port = 3001;
+
+app.use(cors({
+  origin: [
+    '*',
+    'http://localhost:3000'
+  ]
+}));
 
 // Função para gerar um nome de arquivo único
 function generateUniqueFilename(filepath) {
@@ -24,11 +35,15 @@ function generateUniqueFilename(filepath) {
 // Função para baixar e converter vídeo do YouTube para MP3
 async function downloadAndConvertToMp3(url, outputPath) {
   try {
+    const info = await ytdl.getInfo(url);
+    const title = info.videoDetails.title;
+    const outputFilePath = path.join(outputPath, `${title}.mp3`);
+
     const videoReadableStream = ytdl(url, { filter: 'audioonly' });
 
     ffmpeg(videoReadableStream)
       .audioBitrate(128)
-      .save(outputPath)
+      .save(outputFilePath)
       .on('end', () => {
         console.log('Download e conversão concluídos!');
       })
@@ -40,10 +55,19 @@ async function downloadAndConvertToMp3(url, outputPath) {
   }
 }
 
-// Exemplo de uso
-const videoUrl = 'https://www.youtube.com/watch?v=5TwgxM6GWfo'; // Substitua com o URL do vídeo do YouTube
 const downloadsFolder = path.join(os.homedir(), 'Downloads');
-const initialOutputFilePath = path.join(downloadsFolder, 'output.mp3');
-const uniqueOutputFilePath = generateUniqueFilename(initialOutputFilePath);
 
-downloadAndConvertToMp3(videoUrl, uniqueOutputFilePath);
+app.get('/download', async (req, res) => {
+  const videoUrl = req.query.url;
+  if (!videoUrl) {
+    return res.status(400).send('URL do vídeo é obrigatória');
+  }
+
+  downloadAndConvertToMp3(videoUrl, downloadsFolder);
+
+  res.send('Download iniciado. Verifique o console para status.');
+});
+
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
+});
